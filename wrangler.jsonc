@@ -6,6 +6,12 @@
     "directory": "./public",
     "binding": "ASSETS"
   },
+  "r2_buckets": [
+    {
+      "binding": "DL",
+      "bucket_name": "benchy-dl"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

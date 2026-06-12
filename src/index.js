@@ -2,8 +2,11 @@
 //
 // POST /api/results     — opt-in submissions from `bench run` (report_results)
 // GET  /api/leaderboard — models ranked by run-weighted mean composite
+// GET  /dl/<binary>     — CLI release binaries, served from the benchy-dl R2
+//                         bucket (too large / too churny for git-backed assets)
 
 const MAX_ROWS_PER_SUBMISSION = 50;
+const DL_NAME = /^bench-(darwin|linux)-(amd64|arm64)$/;
 
 export default {
   async fetch(request, env) {
@@ -18,9 +21,31 @@ export default {
     if (url.pathname.startsWith("/api/")) {
       return json({ error: "not found" }, 404);
     }
+    if (url.pathname.startsWith("/dl/") && request.method === "GET") {
+      return getBinary(url.pathname.slice(4), env);
+    }
     return env.ASSETS.fetch(request);
   },
 };
+
+async function getBinary(name, env) {
+  if (!DL_NAME.test(name)) {
+    return new Response("not found", { status: 404 });
+  }
+  const obj = await env.DL.get(name);
+  if (!obj) {
+    return new Response("not found", { status: 404 });
+  }
+  return new Response(obj.body, {
+    headers: {
+      "Content-Type": "application/octet-stream",
+      "Content-Length": String(obj.size),
+      "Content-Disposition": `attachment; filename="${name}"`,
+      "Cache-Control": "public, max-age=300",
+      ETag: obj.httpEtag,
+    },
+  });
+}
 
 async function postResults(request, env) {
   let body;
