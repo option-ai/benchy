@@ -1,9 +1,18 @@
 {
   "name": "benchy-site",
+  "main": "src/index.js",
   "compatibility_date": "2026-06-01",
   "assets": {
-    "directory": "./public"
+    "directory": "./public",
+    "binding": "ASSETS"
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "benchy-leaderboard",
+      "database_id": "28923e7b-37ee-4140-aa57-4fd7ceb5089a"
+    }
+  ],
   "routes": [
     { "pattern": "benchy.run", "custom_domain": true },
     { "pattern": "www.benchy.run", "custom_domain": true }

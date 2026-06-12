@@ -1,0 +1,79 @@
+// benchy.run worker: serves the static site plus the global leaderboard API.
+//
+// POST /api/results     — opt-in submissions from `bench run` (report_results)
+// GET  /api/leaderboard — models ranked by run-weighted mean composite
+
+const MAX_ROWS_PER_SUBMISSION = 50;
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/api/results" && request.method === "POST") {
+      return postResults(request, env);
+    }
+    if (url.pathname === "/api/leaderboard" && request.method === "GET") {
+      return getLeaderboard(env);
+    }
+    if (url.pathname.startsWith("/api/")) {
+      return json({ error: "not found" }, 404);
+    }
+    return env.ASSETS.fetch(request);
+  },
+};
+
+async function postResults(request, env) {
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: "invalid JSON" }, 400);
+  }
+  const judge = typeof body.judge === "string" ? body.judge.slice(0, 200) : "";
+  const rows = Array.isArray(body.rows) ? body.rows.slice(0, MAX_ROWS_PER_SUBMISSION) : [];
+  const valid = rows.filter(
+    (r) =>
+      r &&
+      typeof r.model === "string" &&
+      r.model.length > 0 &&
+      r.model.length <= 200 &&
+      Number.isFinite(r.score) &&
+      r.score >= 0 &&
+      r.score <= 10 &&
+      Number.isInteger(r.runs) &&
+      r.runs > 0 &&
+      r.runs <= 10000
+  );
+  if (valid.length === 0) {
+    return json({ error: "no valid rows" }, 400);
+  }
+  const stmt = env.DB.prepare(
+    "INSERT INTO submissions (model, score, runs, judge) VALUES (?1, ?2, ?3, ?4)"
+  );
+  await env.DB.batch(valid.map((r) => stmt.bind(r.model, r.score, r.runs, judge)));
+  return json({ ok: true, accepted: valid.length });
+}
+
+async function getLeaderboard(env) {
+  const { results } = await env.DB.prepare(
+    `SELECT model,
+            ROUND(SUM(score * runs) / SUM(runs), 2) AS score,
+            SUM(runs) AS runs,
+            COUNT(*) AS submissions
+       FROM submissions
+      GROUP BY model
+      ORDER BY score DESC, model ASC
+      LIMIT 100`
+  ).all();
+  return json({ leaderboard: results }, 200, {
+    "Cache-Control": "public, max-age=60",
+    "Access-Control-Allow-Origin": "*",
+  });
+}
+
+function json(obj, status = 200, headers = {}) {
+  return new Response(JSON.stringify(obj), {
+    status,
+    headers: { "Content-Type": "application/json", ...headers },
+  });
+}
