@@ -1,73 +1,1197 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>benchy — bench your coding agents</title>
-  <meta name="description" content="Benchy replays your real coding sessions against multiple agents and scores them head-to-head." />
-  <style>
-    :root {
-      --bg: #0b0e14;
-      --panel: #11151f;
-      --text: #e8ecf3;
-      --muted: #8a93a6;
-      --accent: #7cf2a0;
-      --border: #1e2434;
-      font-size: 16px;
-    }
-    * { box-sizing: border-box; margin: 0; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      min-height: 100svh;
-      display: grid;
-      place-items: center;
-      padding: 2rem;
-    }
-    main { max-width: 40rem; width: 100%; }
-    .logo {
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 2.5rem;
-      font-weight: 700;
-      letter-spacing: -0.03em;
-    }
-    .logo .dot { color: var(--accent); }
-    .tag { margin-top: 0.75rem; color: var(--muted); font-size: 1.125rem; line-height: 1.6; }
-    .card {
-      margin-top: 2.5rem;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 1.5rem;
-      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-      font-size: 0.875rem;
-      line-height: 1.9;
-      overflow-x: auto;
-    }
-    .card .c { color: var(--muted); }
-    .card .g { color: var(--accent); }
-    .bar { display: inline-block; }
-    footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.8125rem; }
-    a { color: var(--accent); text-decoration: none; }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>benchy — benchmark agents on the work you actually do</title>
+<meta name="description" content="capture a real session once. replay it against every agent you use. get one honest number back." />
+<link rel="icon" href="/assets/benchy-logo.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.34.0/dist/tabler-icons.min.css" />
+<style>
+/* ==== Bench design tokens (brand + functional terminal palette) ============ */
+:root {
+  --paper:        #FBFAF8;
+  --paper-2:      #F4F3EF;
+  --paper-3:      #ECEBE6;
+  --ink:          #2A2319;
+  --ink-2:        #4A4034;
+  --ink-3:        #837C70;
+  --line:         #E7E5DF;
+  --line-strong:  #D8D5CD;
+
+  --carrot:       #ED7032;
+  --carrot-600:   #D85F22;
+  --carrot-300:   #F6A877;
+  --carrot-100:   #FBE2CE;
+
+  --term-bg:      #1C1813;
+  --term-bg-2:    #25201A;
+  --term-fg:      #ECE3D2;
+  --term-line:    #3A3228;
+
+  --accent:       #6C4FE0;  --accent-dark: #9D8CFF;
+  --pick:         #C2185B;  --pick-dark:   #FF79C6;
+  --good:         #2E7D32;  --good-dark:   #73F59F;
+  --warn:         #B26A00;  --warn-dark:   #FFB454;
+  --err:          #C62828;  --err-dark:    #FF6B6B;
+  --dim:          #6E6E6E;  --dim-dark:    #9AA0A6;
+
+  --surface-card:     #FFFFFF;
+  --surface-raised:   var(--paper-2);
+  --surface-inset:    var(--paper-3);
+  --border-strong:    var(--line-strong);
+  --text-strong:      var(--ink);
+  --text-body:        var(--ink-2);
+  --text-muted:       var(--ink-3);
+
+  --status-running: var(--accent);
+  --status-done:    var(--good);
+  --status-error:   var(--err);
+  --status-warn:    var(--warn);
+  --status-queued:  var(--dim);
+  --selection:      var(--pick);
+
+  --font-sans: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --radius-xs: 3px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+
+  --shadow-sm: 0 1px 3px rgba(42,35,25,.08), 0 1px 2px rgba(42,35,25,.05);
+  --shadow-term: 0 18px 50px rgba(20,16,12,.45), 0 4px 12px rgba(20,16,12,.30);
+
+  --dur-fast: 90ms;
+  --ease-out: cubic-bezier(.2, 0, 0, 1);
+  --leading-mono: 1.5;
+}
+.term-dark {
+  --surface-card:   var(--term-bg-2);
+  --surface-inset:  #15110D;
+  --border-strong:  #4A4034;
+  --text-strong:    var(--term-fg);
+  --text-body:      #C8BCA6;
+  --text-muted:     var(--dim-dark);
+  --status-running: var(--accent-dark);
+  --status-done:    var(--good-dark);
+  --status-error:   var(--err-dark);
+  --status-warn:    var(--warn-dark);
+  --status-queued:  var(--dim-dark);
+  --selection:      var(--pick-dark);
+}
+
+/* ==== base ================================================================= */
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--paper);
+  min-height: 100vh;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+h1, h2, h3, p { margin: 0; }
+button { font: inherit; }
+code { font-family: var(--font-mono); font-size: 13.5px; color: var(--ink); }
+
+.section { width: 100%; display: flex; justify-content: center; }
+.section > .inner { width: 100%; max-width: 1120px; padding: 0 32px; }
+
+.eyebrow {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+}
+.eyebrow .slashes { color: var(--carrot); margin-right: 8px; }
+.eyebrow.dark { color: var(--dim-dark); }
+.eyebrow.dark .slashes { color: var(--carrot-300); }
+
+.h2 {
+  font-family: var(--font-sans); font-weight: 700;
+  font-size: clamp(28px, 3.6vw, 40px); letter-spacing: -.03em; line-height: 1.06;
+  color: var(--ink); text-wrap: balance;
+}
+.h2.dark { color: var(--term-fg); }
+
+.lp-link { transition: color .15s ease; }
+.lp-link:hover { color: var(--ink) !important; }
+.lp-btn { transition: background .15s ease; }
+.lp-btn:hover { background: var(--carrot-600) !important; }
+.lp-cell { transition: background .15s ease; }
+.lp-cell:hover { background: var(--paper-2) !important; }
+
+/* entrance: only while <html> carries .lp-entrance (added on load, removed
+   after 1.8s) and reduced-motion is off */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-entrance .rise { animation: lp-rise .7s cubic-bezier(.2,.7,.3,1) both; }
+  @keyframes lp-rise { from { opacity: 0; transform: translateY(14px); } }
+}
+
+/* ==== nav ================================================================== */
+.nav {
+  position: sticky; top: 0; z-index: 20; width: 100%;
+  background: color-mix(in srgb, var(--paper) 80%, transparent);
+  backdrop-filter: saturate(140%) blur(10px);
+  -webkit-backdrop-filter: saturate(140%) blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.nav .bar {
+  max-width: 1120px; margin: 0 auto; padding: 12px 32px;
+  display: flex; align-items: center; justify-content: space-between; gap: 24px;
+}
+.nav nav { display: flex; align-items: center; gap: 26px; }
+.nav-link {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 500; white-space: nowrap;
+  color: var(--ink-2); text-decoration: none; cursor: pointer; line-height: 1;
+}
+.nav .right { display: flex; align-items: center; gap: 14px; }
+.pill-cta {
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; white-space: nowrap;
+  padding: 8px 16px; border-radius: 999px; background: var(--ink); color: var(--paper);
+  font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; line-height: 1;
+}
+.pill-cta:hover { color: var(--paper) !important; }
+.wordmark { display: inline-flex; align-items: center; gap: 10px; }
+.wordmark img { display: block; }
+.wordmark .name { font-family: var(--font-sans); font-weight: 700; letter-spacing: -.03em; color: var(--ink); }
+.wordmark .dot { color: var(--carrot); }
+
+/* ==== hero ================================================================= */
+.hero { padding-top: 92px; padding-bottom: 48px; }
+.hero .inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 24px; }
+.hero h1 {
+  font-family: var(--font-sans); font-weight: 700;
+  font-size: clamp(44px, 6.6vw, 72px); line-height: 1.0; letter-spacing: -.04em;
+  color: var(--ink); max-inline-size: 14ch; text-wrap: balance;
+}
+.hero h1 .you { color: var(--carrot); }
+.hero .sub {
+  font-family: var(--font-sans); font-size: 17px; line-height: 1.55;
+  color: var(--ink-2); max-width: 480px; text-wrap: pretty;
+}
+
+/* install command pill */
+.install-cmd {
+  display: inline-flex; align-items: center; gap: 14px;
+  padding: 10px 10px 10px 18px; border-radius: 999px;
+  background: var(--surface-card); border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-sm); font-family: var(--font-mono); font-size: 13.5px;
+  max-width: 100%;
+}
+.install-cmd .dollar { color: var(--carrot-600); user-select: none; flex: none; }
+.install-cmd .cmd { color: var(--ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.install-cmd button {
+  appearance: none; cursor: pointer; border: none; flex: none;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: 999px;
+  background: var(--ink); color: var(--paper);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600; line-height: 1;
+}
+
+/* ==== thesis =============================================================== */
+.thesis { padding: 88px 0; }
+.thesis .inner { max-width: 860px; text-align: center; }
+.thesis p {
+  font-family: var(--font-sans); font-weight: 600;
+  font-size: clamp(24px, 3.2vw, 34px); line-height: 1.3; letter-spacing: -.02em;
+  color: var(--ink); text-wrap: balance;
+}
+.thesis .their { color: var(--ink-3); }
+.thesis .your { color: var(--carrot); }
+
+/* ==== how it works ========================================================= */
+.how { padding-top: 24px; padding-bottom: 88px; }
+.how .head { display: flex; flex-direction: column; gap: 12px; margin-bottom: 36px; scroll-margin-top: 80px; max-width: 560px; }
+.lp-grid3 {
+  display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 1px;
+  background: var(--line); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.step { background: var(--paper); padding: 28px 28px 34px; display: flex; flex-direction: column; gap: 14px; }
+.step .n { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--carrot-600); letter-spacing: .08em; }
+.step h3 { font-family: var(--font-sans); font-size: 21px; font-weight: 650; letter-spacing: -.015em; color: var(--ink); }
+.step .chip {
+  font-family: var(--font-mono); font-size: 13px; padding: 7px 11px; white-space: nowrap;
+  background: var(--surface-inset); border-radius: var(--radius-xs);
+  border: 1px solid var(--line); color: var(--ink); width: fit-content; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.step .chip .dollar { color: var(--carrot-600); font-weight: 700; margin-right: 6px; }
+.step .chip b { font-weight: 600; }
+.step p { font-family: var(--font-sans); font-size: 14.5px; line-height: 1.55; color: var(--ink-2); text-wrap: pretty; }
+.step p b { color: var(--ink); font-weight: 600; }
+
+/* ==== scoring (full-bleed dark) ============================================ */
+.scoring { background: var(--term-bg); padding: 96px 0; }
+.lp-grid2 { display: grid; gap: 56px; align-items: center; }
+.scoring .lp-grid2 { grid-template-columns: minmax(0,.92fr) minmax(0,1.08fr); scroll-margin-top: 80px; }
+.scoring .left { display: flex; flex-direction: column; gap: 18px; }
+.formula {
+  font-family: var(--font-mono); font-size: 16px; font-weight: 600;
+  padding: 14px 16px; border-radius: var(--radius-sm);
+  background: #15110D; border: 1px solid var(--term-line);
+  color: var(--term-fg); line-height: 1.5;
+}
+.scoring .blurb { font-family: var(--font-sans); font-size: 15.5px; line-height: 1.6; color: #C8BCA6; text-wrap: pretty; }
+.scoring .blurb b { color: var(--term-fg); font-weight: 600; }
+.score-pills { display: flex; align-items: center; gap: 14px; margin-top: 4px; }
+.score-pill { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.score-pill .num {
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-weight: 700;
+  font-size: 34px; line-height: 1; padding: 10px 16px; border-radius: var(--radius-sm);
+}
+.score-pill .detail { font-family: var(--font-mono); font-size: 11px; color: var(--dim-dark); }
+.rubric-card {
+  background: var(--term-bg-2); border: 1px solid var(--term-line);
+  border-radius: var(--radius-lg); padding: 2rem;
+  display: flex; flex-direction: column; gap: 22px;
+}
+.rubric-label {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  letter-spacing: .14em; text-transform: uppercase; color: var(--dim-dark);
+}
+.weights { display: flex; flex-direction: column; gap: 13px; }
+.wbar { display: flex; align-items: center; gap: 12px; }
+.wbar .lbl { flex: 0 0 168px; font-family: var(--font-sans); font-size: 14.5px; color: #C8BCA6; }
+.wbar .track { flex: 1; height: 7px; border-radius: 999px; background: var(--term-line); overflow: hidden; }
+.wbar .fill { height: 100%; background: var(--carrot); border-radius: 999px; }
+.wbar .val { flex: none; width: 4ch; text-align: right; font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--term-fg); }
+.gates { display: flex; flex-direction: column; gap: 11px; padding-top: 18px; border-top: 1px solid var(--term-line); }
+.gate { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 13.5px; }
+.gate .name { color: var(--term-fg); flex: 1; }
+.gate .effect { color: var(--dim-dark); flex: none; }
+
+/* ==== leaderboard ========================================================== */
+.leaderboard { padding: 96px 0; }
+.leaderboard .lp-grid2 { grid-template-columns: minmax(0,1fr) minmax(0,1fr); scroll-margin-top: 80px; }
+.leaderboard .left { display: flex; flex-direction: column; gap: 18px; }
+.leaderboard .blurb { font-family: var(--font-sans); font-size: 15.5px; line-height: 1.6; color: var(--ink-2); text-wrap: pretty; }
+.leaderboard .blurb b { color: var(--ink); font-weight: 600; }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500; line-height: 1.45;
+  letter-spacing: .01em; border-radius: var(--radius-xs);
+  color: var(--text-muted); border: 1px solid var(--border-strong);
+  background: transparent; white-space: nowrap;
+}
+.tag.accent { color: var(--carrot); border-color: var(--carrot); }
+
+/* terminal window chrome */
+.term-window {
+  border-radius: var(--radius-md); overflow: hidden;
+  background: var(--term-bg); border: 1px solid var(--term-line);
+  box-shadow: var(--shadow-term); font-family: var(--font-mono);
+}
+.term-window .titlebar {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: #15110D; border-bottom: 1px solid var(--term-line);
+}
+.term-window .dots { display: flex; gap: 7px; }
+.term-window .dots span { width: 11px; height: 11px; border-radius: 50%; display: block; }
+.term-window .dots .r { background: #E8675B; }
+.term-window .dots .y { background: #E5BE55; }
+.term-window .dots .g { background: #7FC772; }
+.term-window .title {
+  font-family: var(--font-mono); font-size: 12px; color: var(--dim-dark);
+  letter-spacing: .01em; flex: 1; text-align: center; margin-right: 44px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.term-window .body { padding: 1.5rem; color: var(--term-fg); font-size: 13.5px; line-height: var(--leading-mono); }
+
+.lb-tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+.lb-tab {
+  appearance: none; cursor: pointer; border: none;
+  padding: 5px 11px; border-radius: var(--radius-xs);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  letter-spacing: .02em; line-height: 1;
+  background: transparent; color: var(--dim-dark); box-shadow: none;
+}
+.lb-tab.on {
+  background: color-mix(in srgb, var(--carrot) 22%, transparent);
+  color: var(--carrot-300);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--carrot) 40%, transparent);
+}
+.lb-head {
+  display: flex; justify-content: space-between; font-family: var(--font-mono);
+  font-size: 11px; color: var(--dim-dark); padding: 0 10px 8px;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.lb-rows { display: flex; flex-direction: column; gap: 2px; }
+.lb-row {
+  display: flex; align-items: baseline; gap: 14px; padding: 5px 10px;
+  font-family: var(--font-mono); font-size: 13.5px; line-height: 1.6;
+  border-radius: var(--radius-xs);
+}
+.lb-row.top { background: color-mix(in srgb, var(--status-done) 9%, transparent); }
+.lb-row .rank { color: var(--text-muted); width: 2.2ch; flex: none; text-align: right; }
+.lb-row .star { color: var(--carrot-300); }
+.lb-row .model { color: var(--text-strong); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-row .score { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; flex: none; }
+.lb-row .runs { color: var(--text-muted); flex: none; width: 9ch; text-align: right; }
+
+/* ==== agents =============================================================== */
+.agents { padding-top: 0; padding-bottom: 96px; }
+.agents .wrap { scroll-margin-top: 80px; display: flex; flex-direction: column; gap: 28px; }
+.agents .head { display: flex; flex-direction: column; gap: 12px; max-width: 640px; }
+.agents .blurb { font-family: var(--font-sans); font-size: 15.5px; line-height: 1.6; color: var(--ink-2); text-wrap: pretty; }
+.agents .blurb b { color: var(--ink); font-weight: 600; }
+.lp-grid4 {
+  display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 1px;
+  background: var(--line); border: 1px solid var(--line);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+.agent-cell { background: var(--paper); padding: 22px 24px; display: flex; flex-direction: column; gap: 9px; }
+.agent-cell .name { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-mono); font-size: 15px; font-weight: 700; color: var(--ink); }
+.agent-cell .login { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-3); }
+.agent-cell .login .dollar { margin-right: 5px; }
+
+/* ==== closing + footer ===================================================== */
+.closing { border-top: 1px solid var(--line); padding: 104px 0; }
+.closing .inner { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 22px; }
+.closing h2 {
+  font-family: var(--font-sans); font-weight: 700; font-size: clamp(32px, 4.5vw, 52px);
+  letter-spacing: -.035em; color: var(--ink); max-width: 16ch; line-height: 1.05; text-wrap: balance;
+}
+.closing h2 .your { color: var(--carrot); }
+.closing .sub { font-family: var(--font-sans); font-size: 17px; line-height: 1.55; color: var(--ink-2); max-width: 520px; text-wrap: pretty; }
+footer.site { width: 100%; border-top: 1px solid var(--line); background: var(--surface-raised); }
+footer.site .bar {
+  max-width: 1120px; margin: 0 auto; padding: 26px 32px;
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+}
+footer.site .brand { display: flex; flex-direction: column; gap: 6px; }
+footer.site .tagline { font-family: var(--font-mono); font-size: 12px; color: var(--ink-3); }
+footer.site .links { display: flex; gap: 22px; flex-wrap: wrap; align-items: center; }
+.foot-link { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-3); text-decoration: none; cursor: pointer; white-space: nowrap; }
+
+/* ==== interactive demo ===================================================== */
+#demo { scroll-margin-top: 80px; width: 100%; display: flex; flex-direction: column; align-items: center; }
+.demo-frame {
+  position: relative; display: flex; justify-content: center; width: 100%; outline: none;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 64px -28px rgba(42,35,25,.35);
+}
+.demo-hint { display: flex; justify-content: center; gap: 18px; margin-top: 18px; flex-wrap: wrap; }
+.demo-hint span { color: var(--ink-3); font-family: var(--font-mono); font-size: 12.5px; }
+.demo-hint .keys { color: var(--carrot-600); font-weight: 600; }
+
+.bench-app { width: 100%; max-width: 900px; display: flex; flex-direction: column; align-items: center; gap: 18px; margin: 0 auto; }
+.crumbs { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 12px; flex-wrap: wrap; justify-content: center; }
+.crumbs .sep { color: var(--line-strong); }
+.crumb { display: flex; align-items: center; gap: 6px; color: var(--ink-3); font-weight: 400; cursor: default; }
+.crumb.cur { color: var(--ink); font-weight: 700; }
+.crumb.clickable { cursor: pointer; }
+.crumb .ball {
+  width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700;
+  background: var(--paper-3); color: var(--ink-3); border: 1px solid var(--line-strong);
+}
+.crumb.cur .ball { background: var(--carrot); border-color: var(--carrot); color: #fff; }
+.crumb.done .ball { background: var(--good); border-color: var(--good); color: #fff; }
+.bench-screen { width: 100%; }
+
+.picker-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.picker-head .ptitle { color: var(--accent-dark); font-weight: 700; font-size: 15px; }
+.picker-head .pcount { color: var(--dim-dark); font-size: 12px; }
+.sel-row {
+  display: flex; align-items: baseline; gap: 8px; padding: 3px 8px;
+  font-family: var(--font-mono); font-size: 13.5px; line-height: 1.6;
+  border-radius: var(--radius-xs); cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.sel-row.cursor { background: color-mix(in srgb, var(--selection) 12%, transparent); }
+.sel-row .caret { color: var(--selection); font-weight: 700; width: .9em; flex: none; white-space: pre; }
+.sel-row .mark { color: var(--text-muted); flex: none; white-space: pre; }
+.sel-row.selected .mark { color: var(--status-done); }
+.sel-row .lbl { color: var(--text-strong); flex: none; min-width: 118px; white-space: nowrap; }
+.sel-row .desc { color: var(--text-muted); flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.picker-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 18px; gap: 16px; flex-wrap: wrap; }
+.picker-foot .actions { display: flex; align-items: center; gap: 10px; }
+.keyhints { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-family: var(--font-mono); font-size: 11.5px; color: var(--text-muted); }
+.keyhints .pair { display: inline-flex; align-items: center; gap: 5px; }
+.keyhints kbd {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--text-body);
+  background: color-mix(in srgb, var(--text-muted) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-muted) 28%, transparent);
+  border-radius: var(--radius-xs); padding: 1px 5px; line-height: 1.4;
+}
+.bench-btn {
+  appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 6px 13px; font-family: var(--font-mono); font-size: 13px; font-weight: 600; line-height: 1;
+  border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap; user-select: none;
+  transition: transform var(--dur-fast) var(--ease-out), background .16s var(--ease-out), box-shadow .16s var(--ease-out);
+}
+.bench-btn:disabled { cursor: not-allowed; opacity: .5; }
+.bench-btn--primary {
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--carrot), #fff 20%), var(--carrot) 46%, var(--carrot-600));
+  border: 1px solid color-mix(in srgb, var(--carrot-600), #000 16%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.42), inset 0 -1px 0 rgba(110,40,8,.22), 0 1px 1.5px rgba(120,52,18,.18);
+}
+.bench-btn--primary:not(:disabled):hover {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--carrot), #fff 12%), var(--carrot-600) 52%, color-mix(in srgb, var(--carrot-600), #000 8%));
+}
+.bench-btn--primary:not(:disabled):active {
+  transform: translateY(.5px);
+  box-shadow: inset 0 1.5px 3px rgba(88,30,6,.34), inset 0 -1px 0 rgba(255,255,255,.08);
+}
+.bench-btn--ghost {
+  color: var(--text-body); background: transparent; border: 1px solid transparent; box-shadow: none;
+}
+.bench-btn--ghost:not(:disabled):hover { background: color-mix(in srgb, var(--text-body) 9%, transparent); }
+.bench-btn--ghost:not(:disabled):active { transform: translateY(.5px); box-shadow: inset 0 1px 2px rgba(42,35,25,.14); }
+
+.cmdline { font-family: var(--font-mono); font-size: 13.5px; line-height: var(--leading-mono); }
+.cmdline .line { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.cmdline .prompt { color: var(--carrot-300); font-weight: 700; }
+.cmdline .cmd { color: var(--text-strong); font-weight: 600; }
+.cmdline .args { color: var(--text-muted); }
+.cmdline .out { color: var(--text-muted); margin-top: 4px; white-space: pre-wrap; }
+
+.prog-rows { margin-top: 14px; }
+.prog-row { display: flex; align-items: baseline; gap: 14px; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.7; white-space: nowrap; }
+.prog-row .ev { color: var(--text-strong); flex: none; }
+.prog-row .mo { color: var(--text-muted); flex: none; }
+.prog-row .st { font-weight: 600; display: inline-flex; gap: 6px; }
+.prog-row .st .glyph { font-weight: 700; }
+.bench-badge {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600; line-height: 1.4;
+  border-radius: var(--radius-xs); white-space: normal;
+  color: var(--status-running); background: rgba(108,79,224,.12);
+}
+.bench-badge .glyph { font-weight: 700; }
+
+.res-heading { color: var(--accent-dark); font-weight: 700; font-size: 15px; }
+.breakdown { display: flex; flex-direction: column; gap: 4px; }
+.bd-row { display: flex; align-items: baseline; gap: 12px; font-family: var(--font-mono); font-size: 13px; line-height: 1.6; flex-wrap: wrap; }
+.bd-row .ev { color: var(--term-fg); min-width: 15ch; }
+.bd-row .mo { color: var(--dim-dark); min-width: 26ch; }
+.bd-row .sc { font-weight: 700; font-variant-numeric: tabular-nums; }
+.bd-row .jg { color: var(--dim-dark); }
+.rationales { display: flex; flex-direction: column; gap: 10px; }
+.rationale .who { font-family: var(--font-mono); font-size: 12px; color: var(--dim-dark); font-weight: 700; }
+.rationale .text { font-family: var(--font-mono); font-size: 13px; color: var(--term-fg); line-height: 1.5; margin-top: 2px; }
+.res-actions { margin-top: 20px; display: flex; gap: 10px; }
+
+/* ==== responsive =========================================================== */
+@media (max-width: 900px) {
+  .lp-grid2 { grid-template-columns: 1fr !important; gap: 36px; }
+  .lp-grid3 { grid-template-columns: 1fr; }
+  .lp-grid4 { grid-template-columns: repeat(2, 1fr); }
+  .nav nav { display: none; }
+  .bd-row .mo { min-width: 0; }
+  .prog-row { white-space: normal; }
+}
+</style>
+<script>
+  document.documentElement.classList.add('lp-entrance');
+  setTimeout(function () { document.documentElement.classList.remove('lp-entrance'); }, 1800);
+</script>
 </head>
 <body>
-  <main>
-    <div class="logo">benchy<span class="dot">.</span>run</div>
-    <p class="tag">
-      Replay your real coding sessions against multiple agents on the exact repo
-      state you captured. A blind judge scores each diff so you can compare
-      models head-to-head.
-    </p>
-    <div class="card">
-      <div><span class="c">$</span> bench run</div>
-      <div><span class="g">▸</span> claude-fable-5&nbsp;&nbsp;<span class="bar">██████████████████</span> 9.2</div>
-      <div><span class="g">▸</span> gpt-6-codex&nbsp;&nbsp;&nbsp;&nbsp;<span class="bar">██████████████</span>&nbsp;&nbsp;&nbsp;&nbsp; 7.4</div>
-      <div><span class="g">▸</span> gemini-3-pro&nbsp;&nbsp;&nbsp;<span class="bar">█████████████</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 6.9</div>
-      <div class="c">3 evals · blind judge · oneshot replay</div>
+
+<!-- ==== nav ============================================================== -->
+<div class="nav">
+  <div class="bar">
+    <span class="wordmark">
+      <img src="/assets/benchy-logo.png" alt="" width="28" height="28" />
+      <span class="name" style="font-size:19px">benchy<span class="dot">.</span></span>
+    </span>
+    <nav>
+      <a class="nav-link lp-link" href="#how">how it works</a>
+      <a class="nav-link lp-link" href="#demo">try it</a>
+      <a class="nav-link lp-link" href="#scoring">scoring</a>
+      <a class="nav-link lp-link" href="#leaderboard">leaderboard</a>
+      <a class="nav-link lp-link" href="#agents">agents</a>
+    </nav>
+    <div class="right">
+      <a class="nav-link lp-link" style="display:inline-flex;align-items:center;gap:6px" href="#">
+        <i class="ti ti-brand-github" style="font-size:16px;line-height:1"></i> github
+      </a>
+      <a class="pill-cta lp-btn" href="#demo">get started</a>
     </div>
-    <footer>coming soon — capture evals with <a href="#">/benchy</a> in your agent</footer>
-  </main>
+  </div>
+</div>
+
+<!-- ==== hero ============================================================= -->
+<section class="section hero">
+  <div class="inner">
+    <h1 class="rise">benchmark agents on the work <span class="you">you</span> actually do.</h1>
+    <p class="sub rise" style="animation-delay:120ms">capture a real session once. replay it against every agent you use. get one honest number back.</p>
+    <div class="install-cmd rise" style="animation-delay:180ms">
+      <span class="dollar">$</span>
+      <span class="cmd">curl -fsSL https://benchy.run/install | sh</span>
+      <button type="button" class="lp-btn" data-copy-install>
+        <i class="ti ti-copy" style="font-size:13px;line-height:1"></i><span>copy</span>
+      </button>
+    </div>
+    <div class="rise" style="width:100%;max-width:880px;margin-top:40px;animation-delay:260ms">
+      <div id="demo">
+        <div class="demo-frame" tabindex="0">
+          <div class="bench-app" id="bench-app"></div>
+        </div>
+        <div class="demo-hint"><span id="demo-hint-text"></span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==== thesis =========================================================== -->
+<section class="section thesis">
+  <div class="inner">
+    <p>Public benchmarks tell you which model is best at <span class="their">their</span> tests.
+    benchy measures the only thing that matters: how each agent does <span class="your">your</span> real work.</p>
+  </div>
+</section>
+
+<!-- ==== how it works ===================================================== -->
+<section class="section how">
+  <div class="inner">
+    <div class="head" id="how">
+      <span class="eyebrow"><span class="slashes">//</span>three steps</span>
+      <h2 class="h2">capture once, replay against anything</h2>
+    </div>
+    <div class="lp-grid3">
+      <div class="step lp-cell">
+        <span class="n">01</span>
+        <h3>capture</h3>
+        <div class="chip"><b>/add-to-benchy</b></div>
+        <p>Turn the Claude Code session you just had into an eval (its prompts, repo, and commit) as one markdown file under <code>~/.config/benchy/snapshots</code>.</p>
+      </div>
+      <div class="step lp-cell">
+        <span class="n">02</span>
+        <h3>replay</h3>
+        <div class="chip"><span class="dollar">$</span><b>benchy run</b></div>
+        <p>Replay those prompts against any installed agent on the exact repo state: <b>repo-backed</b> against a real diff, or <b>scratch</b> in a fresh workspace.</p>
+      </div>
+      <div class="step lp-cell">
+        <span class="n">03</span>
+        <h3>score</h3>
+        <div class="chip"><span class="dollar">$</span><b>benchy results</b></div>
+        <p>A judge that never sees the model identity grades each diff <b>blind</b> into one composite 0–100, then aggregates an all-time leaderboard.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==== scoring (full-bleed dark) ======================================== -->
+<section class="section scoring">
+  <div class="inner">
+    <div class="lp-grid2" id="scoring">
+      <div class="left">
+        <span class="eyebrow dark"><span class="slashes">//</span>the single number</span>
+        <h2 class="h2 dark">every run collapses to one composite</h2>
+        <div class="formula">
+          <span style="color:var(--good-dark)">composite</span> = <span style="color:var(--accent-dark)">judge_overall</span> × <span style="color:var(--carrot-300)">gate_factor</span>
+        </div>
+        <p class="blurb">The judge sees the task, the rubric, and the work, <b>never the model identity</b>. Then gates apply: a pretty diff that doesn't compile can't beat an ugly one that does.</p>
+        <div class="score-pills">
+          <span class="score-pill">
+            <span class="num" style="color:var(--good-dark);background:color-mix(in srgb, var(--good-dark) 12%, transparent)">91.2</span>
+            <span class="detail">judge 92 × gate 1.00</span>
+          </span>
+          <span class="score-pill">
+            <span class="num" style="color:var(--err-dark);background:color-mix(in srgb, var(--err-dark) 12%, transparent)">0.0</span>
+            <span class="detail">build failed · capped 0.30</span>
+          </span>
+        </div>
+      </div>
+      <div class="rubric-card">
+        <div style="display:flex;flex-direction:column;gap:13px">
+          <span class="rubric-label">judge_overall · rubric weights</span>
+          <div class="weights">
+            <div class="wbar"><span class="lbl">task completion</span><div class="track"><div class="fill" style="width:40%"></div></div><span class="val">0.40</span></div>
+            <div class="wbar"><span class="lbl">correctness</span><div class="track"><div class="fill" style="width:30%"></div></div><span class="val">0.30</span></div>
+            <div class="wbar"><span class="lbl">feedback adherence</span><div class="track"><div class="fill" style="width:20%"></div></div><span class="val">0.20</span></div>
+            <div class="wbar"><span class="lbl">scope discipline</span><div class="track"><div class="fill" style="width:10%"></div></div><span class="val">0.10</span></div>
+          </div>
+        </div>
+        <div class="gates">
+          <span class="rubric-label">gate_factor · multipliers</span>
+          <div class="gate"><i class="ti ti-alert-triangle" style="font-size:14px;color:var(--err-dark)"></i><span class="name">build failure</span><span class="effect">caps at 0.30</span></div>
+          <div class="gate"><i class="ti ti-alert-triangle" style="font-size:14px;color:var(--warn-dark)"></i><span class="name">test failure</span><span class="effect">× 0.50</span></div>
+          <div class="gate"><i class="ti ti-minus" style="font-size:14px;color:var(--dim-dark)"></i><span class="name">lint failure</span><span class="effect">− 0.10</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==== leaderboard ====================================================== -->
+<section class="section leaderboard">
+  <div class="inner">
+    <div class="lp-grid2" id="leaderboard">
+      <div class="left">
+        <span class="eyebrow"><span class="slashes">//</span>benchy results</span>
+        <h2 class="h2">your leaderboard — and the community's</h2>
+        <p class="blurb">By default it's all yours: a model's number is the mean composite across the evals <i>you</i> ran. Opt in with <code>benchy submit</code> and your runs fold into a shared leaderboard aggregated <b>by model</b> — so the community can see which agent is genuinely best overall.</p>
+        <p class="blurb">Every run is stamped with its config version, so the pooled numbers stay comparable across everyone who submits.</p>
+        <div class="tags">
+          <span class="tag accent"><span>▸</span>repo-backed</span>
+          <span class="tag accent"><span>▸</span>scratch</span>
+          <span class="tag">oneshot</span>
+          <span class="tag">sequential</span>
+          <span class="tag accent">blind judge</span>
+          <span class="tag accent">opt-in community</span>
+        </div>
+      </div>
+      <div class="term-window term-dark">
+        <div class="titlebar">
+          <div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>
+          <span class="title" id="lb-title">benchy results</span>
+        </div>
+        <div class="body">
+          <div class="lb-tabs">
+            <button type="button" class="lb-tab on" data-lb-view="you">yours</button>
+            <button type="button" class="lb-tab" data-lb-view="community">community</button>
+          </div>
+          <div class="lb-rows" id="lb-rows"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==== agents =========================================================== -->
+<section class="section agents">
+  <div class="inner">
+    <div class="wrap" id="agents">
+      <div class="head">
+        <span class="eyebrow"><span class="slashes">//</span>bring your own logins</span>
+        <h2 class="h2">every agent authenticates as itself</h2>
+        <p class="blurb">benchy stores <b>zero API keys</b>. Each supported agent logs in with its own account. <code>benchy setup</code> walks you through it.</p>
+      </div>
+      <div class="lp-grid4">
+        <div class="agent-cell lp-cell">
+          <span class="name"><i class="ti ti-terminal-2" style="font-size:16px;color:var(--carrot)"></i>claude-code</span>
+          <span class="login"><span class="dollar">$</span>claude /login</span>
+        </div>
+        <div class="agent-cell lp-cell">
+          <span class="name"><i class="ti ti-terminal-2" style="font-size:16px;color:var(--carrot)"></i>codex</span>
+          <span class="login"><span class="dollar">$</span>codex login</span>
+        </div>
+        <div class="agent-cell lp-cell">
+          <span class="name"><i class="ti ti-terminal-2" style="font-size:16px;color:var(--carrot)"></i>cursor-agent</span>
+          <span class="login"><span class="dollar">$</span>cursor-agent login</span>
+        </div>
+        <div class="agent-cell lp-cell">
+          <span class="name"><i class="ti ti-terminal-2" style="font-size:16px;color:var(--carrot)"></i>opencode</span>
+          <span class="login"><span class="dollar">$</span>opencode auth login</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==== closing ========================================================== -->
+<section class="section closing">
+  <div class="inner">
+    <img src="/assets/benchy-logo.png" alt="" width="68" height="68" />
+    <h2>find the model that's best at being <span class="your">your</span> pair.</h2>
+    <p class="sub">Stop guessing from leaderboards you didn't write. One command to start:</p>
+    <div class="install-cmd" style="margin-top:2px">
+      <span class="dollar">$</span>
+      <span class="cmd">curl -fsSL https://benchy.run/install | sh</span>
+      <button type="button" class="lp-btn" data-copy-install>
+        <i class="ti ti-copy" style="font-size:13px;line-height:1"></i><span>copy</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ==== footer =========================================================== -->
+<footer class="site">
+  <div class="bar">
+    <div class="brand">
+      <span class="wordmark">
+        <img src="/assets/benchy-logo.png" alt="" width="25" height="25" />
+        <span class="name" style="font-size:17px">benchy<span class="dot">.</span></span>
+      </span>
+      <span class="tagline">a personal benchmark for coding agents.</span>
+    </div>
+    <div class="links">
+      <a class="foot-link lp-link" href="#how">how it works</a>
+      <a class="foot-link lp-link" href="#scoring">scoring</a>
+      <a class="foot-link lp-link" href="#leaderboard">leaderboard</a>
+      <a class="foot-link lp-link" href="#agents">agents</a>
+      <a class="foot-link lp-link" style="display:inline-flex;align-items:center;gap:6px" href="#"><i class="ti ti-brand-github" style="font-size:14px"></i> github</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+"use strict";
+/* ==========================================================================
+   benchy landing — vanilla JS port of the Claude Design prototype
+   (install copy, leaderboard toggle, interactive `benchy run` demo with
+   ghost-user autoplay, takeover, and back navigation)
+   ========================================================================== */
+
+var INSTALL = "curl -fsSL https://benchy.run/install | sh";
+
+/* ---- install copy buttons ---- */
+document.querySelectorAll("[data-copy-install]").forEach(function (btn) {
+  var icon = btn.querySelector("i");
+  var label = btn.querySelector("span");
+  var t = null;
+  btn.addEventListener("click", function () {
+    try { navigator.clipboard.writeText(INSTALL); } catch (e) { /* noop */ }
+    icon.className = "ti ti-check";
+    label.textContent = "copied";
+    clearTimeout(t);
+    t = setTimeout(function () {
+      icon.className = "ti ti-copy";
+      label.textContent = "copy";
+    }, 1600);
+  });
+});
+
+/* ---- leaderboard section toggle ---- */
+var LB_VIEWS = {
+  you: {
+    title: "benchy results",
+    meta: "yours · 5 runs",
+    rows: [
+      { model: "claude-code:claude-fable-5", score: 87.4, runs: 5 },
+      { model: "codex:gpt-5.1-codex", score: 81.7, runs: 5 },
+      { model: "opencode:grok-code-fast", score: 76.2, runs: 4 },
+      { model: "cursor-agent:auto", score: 48.2, runs: 5 },
+    ],
+  },
+  community: {
+    title: "benchy results --community",
+    meta: "community · 9.2k runs",
+    rows: [
+      { model: "claude-code:claude-fable-5", score: 84.9, runs: 3120 },
+      { model: "codex:gpt-5.1-codex", score: 82.6, runs: 2784 },
+      { model: "opencode:grok-code-fast", score: 71.5, runs: 1846 },
+      { model: "cursor-agent:auto", score: 63.8, runs: 1492 },
+    ],
+  },
+};
+
+function gradeColor(score) {
+  if (score >= 75) return "var(--status-done)";
+  if (score >= 50) return "var(--status-warn)";
+  return "var(--status-error)";
+}
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function lbRowHTML(r, i) {
+  return '<div class="lb-row' + (i === 0 ? " top" : "") + '">' +
+    '<span class="rank">' + (i + 1) + '.</span>' +
+    (i === 0 ? '<span class="star" aria-hidden="true">★</span>' : '') +
+    '<span class="model">' + esc(r.model) + '</span>' +
+    '<span class="score" style="color:' + gradeColor(r.score) + '">' + r.score.toFixed(1) + '</span>' +
+    '<span class="runs">(' + r.runs + ' run' + (r.runs === 1 ? "" : "s") + ')</span>' +
+    '</div>';
+}
+function renderLb(view) {
+  var d = LB_VIEWS[view];
+  document.getElementById("lb-title").textContent = d.title;
+  document.getElementById("lb-rows").innerHTML =
+    '<div class="lb-head"><span>' + esc(d.meta) + '</span><span>composite</span></div>' +
+    d.rows.map(lbRowHTML).join("");
+  document.querySelectorAll(".lb-tab").forEach(function (b) {
+    b.classList.toggle("on", b.dataset.lbView === view);
+  });
+}
+document.querySelectorAll(".lb-tab").forEach(function (b) {
+  b.addEventListener("click", function () { renderLb(b.dataset.lbView); });
+});
+renderLb("you");
+
+/* ==========================================================================
+   Interactive `benchy run` demo
+   ========================================================================== */
+
+var BENCH_DATA = {
+  evals: [
+    { name: "refactor-auth",    flavour: "repo-backed", prompts: 3, desc: "github.com/acme/api @ a1b2c3d" },
+    { name: "fix-flaky-test",   flavour: "repo-backed", prompts: 1, desc: "github.com/acme/api @ 9f0e1d2" },
+    { name: "add-rate-limit",   flavour: "repo-backed", prompts: 2, desc: "github.com/acme/gateway @ 4c5b6a7" },
+    { name: "explain-codebase", flavour: "scratch",     prompts: 1, desc: "expects: answer" },
+    { name: "design-cli-flags", flavour: "scratch",     prompts: 2, desc: "expects: conversation" },
+  ],
+  models: [
+    { ref: "claude-code:claude-fable-5", agent: "claude-code" },
+    { ref: "codex:gpt-5.1-codex",        agent: "codex" },
+    { ref: "cursor-agent:auto",          agent: "cursor-agent" },
+    { ref: "opencode:grok-code-fast",    agent: "opencode" },
+  ],
+  scores: {
+    "refactor-auth|claude-code:claude-fable-5":  { composite: 91.2, judge: 92, gate: 1.00 },
+    "refactor-auth|codex:gpt-5.1-codex":         { composite: 84.6, judge: 88, gate: 0.96 },
+    "refactor-auth|cursor-agent:auto":           { composite: 70.1, judge: 78, gate: 0.90 },
+    "fix-flaky-test|claude-code:claude-fable-5": { composite: 88.0, judge: 88, gate: 1.00 },
+    "fix-flaky-test|codex:gpt-5.1-codex":        { composite: 81.5, judge: 86, gate: 0.95 },
+    "fix-flaky-test|cursor-agent:auto":          { composite: 0,    judge: 0,  gate: 0.30, err: "build failed — gate capped at 0.30" },
+    "explain-codebase|claude-code:claude-fable-5": { composite: 83.0, judge: 83, gate: 1.00 },
+    "explain-codebase|codex:gpt-5.1-codex":      { composite: 79.0, judge: 79, gate: 1.00 },
+    "explain-codebase|cursor-agent:auto":        { composite: 74.4, judge: 74, gate: 1.00 },
+  },
+  rationales: {
+    "refactor-auth|claude-code:claude-fable-5":
+      "Cleanly extracted the token logic into a middleware, kept the public API stable, and added focused tests. Scope was tight — only touched auth. Build + tests green.",
+    "fix-flaky-test|cursor-agent:auto":
+      "Diff looked plausible but introduced a compile error in the test helper; the build gate caps the composite at 0.30 regardless of judge score.",
+  },
+};
+
+function hashScore(key) {
+  var h = 0;
+  for (var i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) & 0xffff;
+  return 55 + (h % 38);
+}
+function scoreFor(evalName, modelRef) {
+  var k = evalName + "|" + modelRef;
+  var s = BENCH_DATA.scores[k];
+  if (s) return s;
+  var c = hashScore(k);
+  return { composite: c, judge: Math.min(100, c + 4), gate: 1.0 };
+}
+
+var STAGES = ["queued", "cloning", "running", "judging", "done"];
+var STAGE_META = {
+  queued:  { glyph: "·", color: "var(--status-queued)",  label: "queued" },
+  cloning: { glyph: "◐", color: "var(--status-running)", label: "cloning repo" },
+  running: { glyph: "◐", color: "var(--status-running)", label: "running agent" },
+  judging: { glyph: "◐", color: "var(--status-running)", label: "judging diff" },
+  done:    { glyph: "✓", color: "var(--status-done)",    label: "done" },
+  error:   { glyph: "✗", color: "var(--status-error)",   label: "error" },
+};
+var ORDER = ["evals", "models", "judge", "running", "results"];
+var LABELS = { evals: "evals", models: "models", judge: "judge", running: "run", results: "results" };
+
+var S = {
+  step: "evals",
+  cursor: 0,
+  evalSel:  { 0: true, 1: true, 3: true },
+  modelSel: { 0: true, 1: true, 2: true },
+  judgeSel: { 0: true },
+  elapsed: 0,
+  progTimer: null,
+};
+
+var appEl = document.getElementById("bench-app");
+var frameEl = document.querySelector(".demo-frame");
+var hintEl = document.getElementById("demo-hint-text");
+
+function pickerSpec() {
+  if (S.step === "evals") return {
+    title: "Pick evals to run", command: "benchy run · select evals", multi: true,
+    items: BENCH_DATA.evals, sel: S.evalSel,
+    row: function (it) { return { label: it.name, desc: it.flavour + " · " + it.prompts + " prompt" + (it.prompts === 1 ? "" : "s") + " · " + it.desc }; },
+    next: "models", back: null,
+  };
+  if (S.step === "models") return {
+    title: "Pick models to compare", command: "benchy run · select models", multi: true,
+    items: BENCH_DATA.models, sel: S.modelSel,
+    row: function (it) { return { label: it.ref, desc: it.agent }; },
+    next: "judge", back: "evals",
+  };
+  if (S.step === "judge") return {
+    title: "Choose your blind judge", command: "benchy run · select judge", multi: false,
+    items: BENCH_DATA.models, sel: S.judgeSel,
+    row: function (it) { return { label: it.ref, desc: it.agent + " · sees only the diff + rubric" }; },
+    next: "running", back: "models",
+  };
+  return null;
+}
+function chosenEvals()  { return BENCH_DATA.evals.filter(function (_, i) { return S.evalSel[i]; }); }
+function chosenModels() { return BENCH_DATA.models.filter(function (_, i) { return S.modelSel[i]; }); }
+function judgeRef() {
+  var k = Object.keys(S.judgeSel).find(function (key) { return S.judgeSel[key]; }) || 0;
+  return BENCH_DATA.models[k].ref;
+}
+function buildJobs() {
+  var jobs = [];
+  chosenEvals().forEach(function (e) {
+    chosenModels().forEach(function (m) {
+      jobs.push({ eval: e.name, model: m.ref, fails: scoreFor(e.name, m.ref).composite === 0 });
+    });
+  });
+  return jobs;
+}
+
+function setStep(step) {
+  if (S.progTimer) { clearInterval(S.progTimer); S.progTimer = null; }
+  S.step = step;
+  S.cursor = 0;
+  if (step === "running") {
+    S.elapsed = 0;
+    var jobs = buildJobs();
+    S.progTimer = setInterval(function () {
+      S.elapsed++;
+      if (S.elapsed > (jobs.length - 1) + STAGES.length + 1) {
+        setStep("results");
+        return;
+      }
+      renderApp();
+    }, 360);
+  }
+  renderApp();
+}
+
+/* ---- rendering ---- */
+
+function crumbsHTML() {
+  var cur = ORDER.indexOf(S.step);
+  return '<div class="crumbs">' + ORDER.map(function (s, i) {
+    var cls = "crumb" + (i === cur ? " cur" : i < cur ? " done" : "");
+    var clickable = i < cur && s !== "running";
+    if (clickable) cls += " clickable";
+    var ball = i < cur ? "✓" : (i + 1);
+    return (i > 0 ? '<span class="sep">›</span>' : '') +
+      '<span class="' + cls + '"' + (clickable ? ' data-goto="' + s + '" title="go back to ' + LABELS[s] + '"' : '') + '>' +
+      '<span class="ball">' + ball + '</span>' + LABELS[s] + '</span>';
+  }).join("") + '</div>';
+}
+
+function termWindowHTML(title, bodyHTML) {
+  return '<div class="term-window term-dark" style="width:100%">' +
+    '<div class="titlebar"><div class="dots"><span class="r"></span><span class="y"></span><span class="g"></span></div>' +
+    '<span class="title">' + esc(title) + '</span></div>' +
+    '<div class="body" style="padding:22px 24px">' + bodyHTML + '</div></div>';
+}
+
+function keyhintsHTML(pairs) {
+  return '<div class="keyhints">' + pairs.map(function (p) {
+    return '<span class="pair"><kbd>' + esc(p[0]) + '</kbd><span>' + esc(p[1]) + '</span></span>';
+  }).join("") + '</div>';
+}
+
+function pickerHTML(spec) {
+  var count = 0;
+  spec.items.forEach(function (_, i) { if (spec.sel[i]) count++; });
+  var rows = spec.items.map(function (it, i) {
+    var r = spec.row(it);
+    var selected = !!spec.sel[i];
+    var cursor = S.cursor === i;
+    var mark = spec.multi ? (selected ? "◉" : "◯") : (cursor ? "•" : " ");
+    return '<div class="sel-row' + (cursor ? " cursor" : "") + (selected ? " selected" : "") + '" data-row="' + i + '">' +
+      '<span class="caret">' + (cursor ? "▸" : " ") + '</span>' +
+      '<span class="mark">' + mark + '</span>' +
+      '<span class="lbl">' + esc(r.label) + '</span>' +
+      '<span class="desc">' + esc(r.desc) + '</span></div>';
+  }).join("");
+  var hints = [["↑/↓", "move"]];
+  if (spec.multi) { hints.push(["space", "toggle"], ["a", "all"]); }
+  hints.push(["enter", "confirm"]);
+  if (spec.back) hints.push(["q", "back"]);
+  var body =
+    '<div class="picker-head"><span class="ptitle">' + esc(spec.title) + '</span>' +
+    (spec.multi ? '<span class="pcount">(' + count + '/' + spec.items.length + ' selected)</span>' : '') + '</div>' +
+    '<div>' + rows + '</div>' +
+    '<div class="picker-foot">' + keyhintsHTML(hints) +
+    '<div class="actions">' +
+    (spec.back ? '<button type="button" class="bench-btn bench-btn--ghost" data-back>back</button>' : '') +
+    '<button type="button" class="bench-btn bench-btn--primary" data-confirm' + (count === 0 ? ' disabled' : '') + '>confirm <span style="font-size:1.05em">↵</span></button>' +
+    '</div></div>';
+  return termWindowHTML(spec.command, body);
+}
+
+function progressHTML() {
+  var jobs = buildJobs();
+  var ew = Math.max.apply(null, jobs.map(function (j) { return j.eval.length; }));
+  var mw = Math.max.apply(null, jobs.map(function (j) { return j.model.length; }));
+  var rows = jobs.map(function (j, i) {
+    var local = S.elapsed - i;
+    var idx = Math.max(0, Math.min(STAGES.length - 1, local));
+    var stage = STAGES[idx];
+    var message = null;
+    if (idx >= STAGES.length - 1 && j.fails) { stage = "error"; message = "rate-limited (retries exhausted)"; }
+    var m = STAGE_META[stage];
+    return '<div class="prog-row">' +
+      '<span class="ev" style="min-width:' + ew + 'ch">' + esc(j.eval) + '</span>' +
+      '<span class="mo" style="min-width:' + mw + 'ch">' + esc(j.model) + '</span>' +
+      '<span class="st" style="color:' + m.color + '"><span class="glyph">' + m.glyph + '</span>' + esc(message || m.label) + '</span></div>';
+  }).join("");
+  var body =
+    '<div class="cmdline"><div class="line"><span class="prompt">$</span><span class="cmd">benchy run</span>' +
+    '<span class="args">--evals ' + jobs.length + ' jobs · concurrency 2/agent</span></div></div>' +
+    '<div class="prog-rows">' + rows + '</div>' +
+    '<div style="margin-top:16px"><span class="bench-badge"><span class="glyph">◐</span>scoring with blind judge — never sees the model id</span></div>';
+  return termWindowHTML("benchy run · running", body);
+}
+
+function resultsHTML() {
+  var evals = chosenEvals(), models = chosenModels();
+  var board = models.map(function (m) {
+    var vals = evals.map(function (e) { return scoreFor(e.name, m.ref).composite; });
+    var mean = vals.reduce(function (a, b) { return a + b; }, 0) / vals.length;
+    return { model: m.ref, score: mean, runs: evals.length };
+  }).sort(function (a, b) { return b.score - a.score; });
+
+  var breakdown = [];
+  evals.forEach(function (e) {
+    models.forEach(function (m) {
+      var s = scoreFor(e.name, m.ref);
+      breakdown.push(Object.assign({ eval: e.name, model: m.ref, key: e.name + "|" + m.ref }, s));
+    });
+  });
+
+  var boardRows = board.map(function (r, i) {
+    return '<div class="lb-row' + (i === 0 ? " top" : "") + '">' +
+      '<span class="rank">' + (i + 1) + '.</span>' +
+      (i === 0 ? '<span class="star" aria-hidden="true">★</span>' : '') +
+      '<span class="model">' + esc(r.model) + '</span>' +
+      '<span class="score" style="color:' + gradeColor(r.score) + '">' + r.score.toFixed(1) + '</span>' +
+      '<span class="runs">(' + r.runs + ' run' + (r.runs === 1 ? "" : "s") + ')</span></div>';
+  }).join("");
+
+  var bdRows = breakdown.map(function (b) {
+    return '<div class="bd-row">' +
+      '<span class="ev">' + esc(b.eval) + '</span>' +
+      '<span class="mo">' + esc(b.model) + '</span>' +
+      '<span class="sc" style="color:' + gradeColor(b.composite) + '">' + b.composite.toFixed(1) + '</span>' +
+      '<span class="jg">judge ' + b.judge + ' · gate ' + b.gate.toFixed(2) + '</span>' +
+      (b.err ? '<span class="tag"><span>✗</span>' + esc(b.err) + '</span>' : '') + '</div>';
+  }).join("");
+
+  var rats = breakdown.filter(function (b) { return BENCH_DATA.rationales[b.key]; }).map(function (b) {
+    return '<div class="rationale"><div class="who">' + esc(b.eval) + ' · ' + esc(b.model) + '</div>' +
+      '<div class="text">' + esc(BENCH_DATA.rationales[b.key]) + '</div></div>';
+  }).join("");
+
+  var body =
+    '<div class="cmdline"><div class="line"><span class="prompt">$</span><span class="cmd">benchy run</span>' +
+    '<span class="args">--judge ' + esc(judgeRef()) + '</span></div>' +
+    '<div class="out">scored ' + breakdown.length + ' jobs · config v3</div></div>' +
+    '<div class="res-heading" style="margin:18px 0 6px">Leaderboard</div>' + boardRows +
+    '<div class="res-heading" style="margin:20px 0 8px">Per-eval breakdown</div>' +
+    '<div class="breakdown">' + bdRows + '</div>' +
+    '<div class="res-heading" style="margin:20px 0 8px">Rationales</div>' +
+    '<div class="rationales">' + rats + '</div>' +
+    '<div class="res-actions">' +
+    '<button type="button" class="bench-btn bench-btn--primary" data-restart><span style="font-size:1.05em">↻</span> run again</button>' +
+    '<button type="button" class="bench-btn bench-btn--ghost">benchy results compare</button></div>';
+  return termWindowHTML("benchy results", body);
+}
+
+function renderApp() {
+  var spec = pickerSpec();
+  var screen;
+  if (spec) screen = pickerHTML(spec);
+  else if (S.step === "running") screen = progressHTML();
+  else screen = resultsHTML();
+  appEl.innerHTML = crumbsHTML() + '<div class="bench-screen">' + screen + '</div>';
+}
+
+function renderHint() {
+  hintEl.innerHTML = autoplaying
+    ? 'auto-playing · click or press <span class="keys">↑/↓ space enter</span> to take over'
+    : 'your turn · <span class="keys">↑/↓ space enter</span> · q goes back';
+}
+
+/* ---- interactions (event delegation) ---- */
+
+appEl.addEventListener("click", function (e) {
+  var t = e.target.closest("[data-goto],[data-row],[data-back],[data-confirm],[data-restart]");
+  if (!t) return;
+  if (t.dataset.goto) { setStep(t.dataset.goto); return; }
+  if (t.dataset.restart !== undefined) { setStep("evals"); return; }
+  var spec = pickerSpec();
+  if (!spec) return;
+  if (t.dataset.back !== undefined) { setStep(spec.back); return; }
+  if (t.dataset.confirm !== undefined) { confirmStep(spec); return; }
+  if (t.dataset.row !== undefined) {
+    var i = +t.dataset.row;
+    S.cursor = i;
+    toggleSel(spec, i);
+    renderApp();
+  }
+});
+
+function toggleSel(spec, i) {
+  if (spec.multi) spec.sel[i] = !spec.sel[i];
+  else { Object.keys(spec.sel).forEach(function (k) { delete spec.sel[k]; }); spec.sel[i] = true; }
+}
+function confirmStep(spec) {
+  var any = spec.items.some(function (_, i) { return spec.sel[i]; });
+  if (any) setStep(spec.next);
+}
+
+function handleKey(key) {
+  var spec = pickerSpec();
+  if (!spec) return false;
+  if (key === "ArrowDown" || key === "j") { S.cursor = Math.min(spec.items.length - 1, S.cursor + 1); renderApp(); return true; }
+  if (key === "ArrowUp" || key === "k") { S.cursor = Math.max(0, S.cursor - 1); renderApp(); return true; }
+  if (key === " ") { toggleSel(spec, S.cursor); renderApp(); return true; }
+  if (key === "a" && spec.multi) {
+    var all = spec.items.every(function (_, i) { return spec.sel[i]; });
+    Object.keys(spec.sel).forEach(function (k) { delete spec.sel[k]; });
+    if (!all) spec.items.forEach(function (_, i) { spec.sel[i] = true; });
+    renderApp(); return true;
+  }
+  if (key === "Enter") { confirmStep(spec); return true; }
+  if ((key === "q" || key === "Escape") && spec.back) { setStep(spec.back); return true; }
+  return false;
+}
+
+/* ---- keyboard gate + ghost autoplay ---- */
+
+var hovered = false, focused = false, takenOver = false, autoplaying = true;
+frameEl.addEventListener("mouseenter", function () { hovered = true; });
+frameEl.addEventListener("mouseleave", function () { hovered = false; });
+frameEl.addEventListener("focus", function () { focused = true; });
+frameEl.addEventListener("blur", function () { focused = false; });
+frameEl.addEventListener("pointerdown", takeOver);
+
+function takeOver() {
+  if (takenOver) return;
+  takenOver = true;
+  autoplaying = false;
+  renderHint();
+}
+
+var DEMO_KEYS = ["ArrowDown", "ArrowUp", "ArrowLeft", "ArrowRight", " ", "a", "j", "k", "q", "Escape", "Enter"];
+window.addEventListener("keydown", function (e) {
+  if (DEMO_KEYS.indexOf(e.key) === -1) return;
+  // real keys only act when the demo is hovered or focused, so the page
+  // scrolls normally; a real key on the demo also counts as taking over
+  if (!(hovered || focused)) return;
+  takeOver();
+  if (handleKey(e.key)) e.preventDefault();
+});
+
+function startAutoplay() {
+  if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    autoplaying = false;
+    renderHint();
+    return;
+  }
+  // ghost user: glide three rows down, three up, twice — never confirms or
+  // enters menus. Stops instantly on takeover (click or key on the demo).
+  var STEPS = 3, PASSES = 4;
+  var dir = 1, n = 0, pass = 0;
+  var iv = setInterval(function () {
+    if (takenOver) { clearInterval(iv); return; }
+    handleKey(dir > 0 ? "ArrowDown" : "ArrowUp");
+    n++;
+    if (n >= STEPS) {
+      n = 0; dir = -dir; pass++;
+      if (pass >= PASSES) {
+        clearInterval(iv);
+        autoplaying = false;
+        renderHint();
+      }
+    }
+  }, 1200);
+}
+
+renderApp();
+renderHint();
+startAutoplay();
+</script>
 </body>
 </html>
