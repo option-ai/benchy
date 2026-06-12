@@ -1,0 +1,48 @@
+#!/bin/sh
+# benchy installer — https://benchy.run
+# Usage: curl -fsSL https://benchy.run/install | sh
+set -eu
+
+BASE_URL="https://benchy.run/dl"
+INSTALL_DIR="${BENCH_INSTALL_DIR:-$HOME/.local/bin}"
+
+main() {
+  os=$(uname -s | tr '[:upper:]' '[:lower:]')
+  arch=$(uname -m)
+  case "$arch" in
+    x86_64|amd64) arch="amd64" ;;
+    arm64|aarch64) arch="arm64" ;;
+    *) err "unsupported architecture: $arch" ;;
+  esac
+  case "$os" in
+    darwin|linux) ;;
+    *) err "unsupported OS: $os (darwin and linux only)" ;;
+  esac
+
+  url="$BASE_URL/bench-$os-$arch"
+  echo "Downloading bench ($os/$arch)..."
+  mkdir -p "$INSTALL_DIR"
+  tmp=$(mktemp)
+  curl -fsSL "$url" -o "$tmp" || err "download failed: $url"
+  chmod +x "$tmp"
+  mv "$tmp" "$INSTALL_DIR/bench"
+  echo "Installed bench to $INSTALL_DIR/bench"
+
+  case ":$PATH:" in
+    *":$INSTALL_DIR:"*) ;;
+    *) echo "NOTE: $INSTALL_DIR is not on your PATH — add it to your shell profile." ;;
+  esac
+
+  echo "Setting up the agent skill and config..."
+  "$INSTALL_DIR/bench" install
+
+  echo ""
+  echo "Done! Next steps:"
+  echo "  bench setup     # check agent logins, pick a judge"
+  echo "  /benchy         # capture an eval inside your coding agent"
+  echo "  bench run       # replay evals and score the leaderboard"
+}
+
+err() { echo "error: $1" >&2; exit 1; }
+
+main
