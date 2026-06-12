@@ -18,6 +18,9 @@ export default {
     if (url.pathname === "/api/leaderboard" && request.method === "GET") {
       return getLeaderboard(env);
     }
+    if (url.pathname === "/api/version" && request.method === "GET") {
+      return getVersion(env);
+    }
     if (url.pathname.startsWith("/api/")) {
       return json({ error: "not found" }, 404);
     }
@@ -27,6 +30,19 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
+
+// getVersion serves the latest CLI release tag for `benchy update` / the
+// daily update hint. Source of truth is latest.json in the benchy-dl bucket,
+// uploaded alongside each release's binaries.
+async function getVersion(env) {
+  const obj = await env.DL.get("latest.json");
+  if (!obj) {
+    return json({ error: "no version published" }, 404);
+  }
+  return new Response(obj.body, {
+    headers: { "Content-Type": "application/json", "Cache-Control": "public, max-age=300" },
+  });
+}
 
 async function getBinary(name, env) {
   if (!DL_NAME.test(name)) {
