@@ -6,7 +6,7 @@
 //                         bucket (too large / too churny for git-backed assets)
 
 const MAX_ROWS_PER_SUBMISSION = 50;
-const DL_NAME = /^bench-(darwin|linux)-(amd64|arm64)$/;
+const DL_NAME = /^benchy?-(darwin|linux)-(amd64|arm64)$/;
 
 export default {
   async fetch(request, env) {

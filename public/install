@@ -4,7 +4,7 @@
 set -eu
 
 BASE_URL="https://benchy.run/dl"
-INSTALL_DIR="${BENCH_INSTALL_DIR:-$HOME/.local/bin}"
+INSTALL_DIR="${BENCHY_INSTALL_DIR:-${BENCH_INSTALL_DIR:-$HOME/.local/bin}}"
 
 main() {
   os=$(uname -s | tr '[:upper:]' '[:lower:]')
@@ -19,14 +19,16 @@ main() {
     *) err "unsupported OS: $os (darwin and linux only)" ;;
   esac
 
-  url="$BASE_URL/bench-$os-$arch"
-  echo "Downloading bench ($os/$arch)..."
+  url="$BASE_URL/benchy-$os-$arch"
+  echo "Downloading benchy ($os/$arch)..."
   mkdir -p "$INSTALL_DIR"
   tmp=$(mktemp)
   curl -fsSL "$url" -o "$tmp" || err "download failed: $url"
   chmod +x "$tmp"
-  mv "$tmp" "$INSTALL_DIR/bench"
-  echo "Installed bench to $INSTALL_DIR/bench"
+  mv "$tmp" "$INSTALL_DIR/benchy"
+  # compat: keep `bench` working for anyone with the old name in muscle memory
+  ln -sf "$INSTALL_DIR/benchy" "$INSTALL_DIR/bench"
+  echo "Installed benchy to $INSTALL_DIR/benchy"
 
   case ":$PATH:" in
     *":$INSTALL_DIR:"*) ;;
@@ -34,13 +36,13 @@ main() {
   esac
 
   echo "Setting up the agent skill and config..."
-  "$INSTALL_DIR/bench" install
+  "$INSTALL_DIR/benchy" install
 
   echo ""
   echo "Done! Next steps:"
-  echo "  bench setup     # check agent logins, pick a judge"
-  echo "  /benchy         # capture an eval inside your coding agent"
-  echo "  bench run       # replay evals and score the leaderboard"
+  echo "  benchy setup     # check agent logins, pick a judge"
+  echo "  /add-to-benchy   # capture an eval inside your coding agent"
+  echo "  benchy run       # replay evals and score the leaderboard"
 }
 
 err() { echo "error: $1" >&2; exit 1; }
