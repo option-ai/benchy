@@ -1,0 +1,11 @@
+{
+  "name": "benchy-site",
+  "compatibility_date": "2026-06-01",
+  "assets": {
+    "directory": "./public"
+  },
+  "routes": [
+    { "pattern": "benchy.run", "custom_domain": true },
+    { "pattern": "www.benchy.run", "custom_domain": true }
+  ]
+}

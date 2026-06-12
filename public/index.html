@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>benchy — bench your coding agents</title>
+  <meta name="description" content="Benchy replays your real coding sessions against multiple agents and scores them head-to-head." />
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --panel: #11151f;
+      --text: #e8ecf3;
+      --muted: #8a93a6;
+      --accent: #7cf2a0;
+      --border: #1e2434;
+      font-size: 16px;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100svh;
+      display: grid;
+      place-items: center;
+      padding: 2rem;
+    }
+    main { max-width: 40rem; width: 100%; }
+    .logo {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+    }
+    .logo .dot { color: var(--accent); }
+    .tag { margin-top: 0.75rem; color: var(--muted); font-size: 1.125rem; line-height: 1.6; }
+    .card {
+      margin-top: 2.5rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.875rem;
+      line-height: 1.9;
+      overflow-x: auto;
+    }
+    .card .c { color: var(--muted); }
+    .card .g { color: var(--accent); }
+    .bar { display: inline-block; }
+    footer { margin-top: 2.5rem; color: var(--muted); font-size: 0.8125rem; }
+    a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="logo">benchy<span class="dot">.</span>run</div>
+    <p class="tag">
+      Replay your real coding sessions against multiple agents on the exact repo
+      state you captured. A blind judge scores each diff so you can compare
+      models head-to-head.
+    </p>
+    <div class="card">
+      <div><span class="c">$</span> bench run</div>
+      <div><span class="g">▸</span> claude-fable-5&nbsp;&nbsp;<span class="bar">██████████████████</span> 9.2</div>
+      <div><span class="g">▸</span> gpt-6-codex&nbsp;&nbsp;&nbsp;&nbsp;<span class="bar">██████████████</span>&nbsp;&nbsp;&nbsp;&nbsp; 7.4</div>
+      <div><span class="g">▸</span> gemini-3-pro&nbsp;&nbsp;&nbsp;<span class="bar">█████████████</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 6.9</div>
+      <div class="c">3 evals · blind judge · oneshot replay</div>
+    </div>
+    <footer>coming soon — capture evals with <a href="#">/benchy</a> in your agent</footer>
+  </main>
+</body>
+</html>
