@@ -190,7 +190,7 @@ func (c *openCode) Run(ctx context.Context, dir string, turns []string, model st
 	defer cancel()
 	var rs []string
 	for i, t := range turns {
-		args := []string{"run", "--model", model}
+		args := []string{"run", "--model", model, "--dangerously-skip-permissions", "--dir", dir}
 		if i > 0 {
 			args = append(args, "--continue")
 		}

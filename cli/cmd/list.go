@@ -28,12 +28,16 @@ var listCmd = &cobra.Command{
 			if replay == "" {
 				replay = "default"
 			}
-			fmt.Printf("• %-28s %-40s (%d prompt(s), replay=%s)\n",
-				s.Title, anchor, len(s.Prompts), replay)
+			fmt.Println(evalLine(s, anchor, replay))
 			if s.Feedback != "" {
 				fmt.Printf("    rubric: %s\n", s.Feedback)
 			}
 		}
 		return nil
 	},
+}
+
+func evalLine(s *snapshot.Snapshot, anchor, replay string) string {
+	return fmt.Sprintf("• %-28s %-40s %-14s (%d prompt(s), replay=%s)",
+		s.Title, anchor, addedLabel(s.Created), len(s.Prompts), replay)
 }
