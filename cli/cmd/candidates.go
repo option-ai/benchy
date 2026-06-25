@@ -30,7 +30,7 @@ Review them here, then promote the good ones into the run set with
 			return nil
 		}
 		for _, c := range cands {
-			fmt.Printf("• %-40s %s\n", c.name, c.verdict)
+			fmt.Println(candidateLine(c))
 			fmt.Printf("  %s\n", c.title)
 		}
 		fmt.Printf("\nPromote one with: benchy candidates promote <name>\n")
@@ -78,6 +78,7 @@ type candidate struct {
 	name    string
 	title   string
 	verdict string
+	created string
 }
 
 func listCandidates() ([]candidate, error) {
@@ -103,6 +104,7 @@ func listCandidates() ([]candidate, error) {
 			name:    strings.TrimSuffix(e.Name(), ".md"),
 			title:   s.Title,
 			verdict: verdictLine(path),
+			created: s.Created,
 		})
 	}
 	return out, nil
@@ -122,4 +124,15 @@ func verdictLine(path string) string {
 		}
 	}
 	return ""
+}
+
+func addedLabel(created string) string {
+	if created == "" {
+		created = "unknown"
+	}
+	return "added " + created
+}
+
+func candidateLine(c candidate) string {
+	return fmt.Sprintf("• %-28s %-14s %s", c.name, addedLabel(c.created), c.verdict)
 }
